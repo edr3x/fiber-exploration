@@ -39,6 +39,38 @@ func CreateUser(c *fiber.Ctx) error {
 	})
 }
 
+func LoginController(c *fiber.Ctx) error {
+	var body model.LoginInput
+
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+	}
+
+	if err := middlewares.ValidateInput(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+			Success: false,
+			Message: err,
+		})
+	}
+
+	response, err := services.LoginService(body)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+			Success: false,
+			Message: err,
+		})
+	}
+
+	return c.Status(200).JSON(model.Response{
+		Success: true,
+		Payload: response,
+	})
+}
+
 func GetUser(c *fiber.Ctx) error {
 	return c.Status(200).JSON(model.Response{
 		Success: true,

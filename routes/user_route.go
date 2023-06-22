@@ -11,4 +11,6 @@ func UserRoute(router fiber.Router) {
 	r.Get("/", controller.GetUser)
 
 	r.Post("/", controller.CreateUser)
+
+	r.Post("/login", controller.LoginController)
 }

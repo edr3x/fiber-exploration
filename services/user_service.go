@@ -1,8 +1,13 @@
 package services
 
 import (
+	"os"
+	"time"
+
 	"github.com/edr3x/fiber-explore/config"
 	"github.com/edr3x/fiber-explore/model"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/matthewhartstonge/argon2"
 )
 
@@ -26,4 +31,43 @@ func CreateUserService(user_data model.CreateUserInput) (interface{}, error) {
 	}
 
 	return user, nil
+}
+
+type LoginResponse struct {
+	Token string    `json:"token"`
+	Data  fiber.Map `json:"data"`
+}
+
+func LoginService(login_creds model.LoginInput) (interface{}, error) {
+	var user model.User
+
+	result := config.DB.Where("email = ?", login_creds.Email).First(&user)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	ok, err := argon2.VerifyEncoded([]byte(login_creds.Password), []byte(user.Password))
+	if !ok || err != nil {
+		return nil, err
+	}
+
+	userToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+	})
+
+	tokenString, err := userToken.SignedString([]byte(os.Getenv("SECRET")))
+	if err != nil {
+		return nil, err
+	}
+
+	return LoginResponse{
+		Token: tokenString,
+		Data: fiber.Map{
+			"email": user.Email,
+			"name":  user.Name,
+			"age":   user.Age,
+		},
+	}, nil
 }
