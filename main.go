@@ -7,17 +7,22 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"github.com/edr3x/fiber-explore/middleware"
+	"github.com/edr3x/fiber-explore/config"
+	"github.com/edr3x/fiber-explore/middlewares"
 	"github.com/edr3x/fiber-explore/model"
 	"github.com/edr3x/fiber-explore/routes"
 )
 
+func init() {
+	config.LoadEnv()
+	config.ConnectToDB()
+	config.DbSync()
+}
+
 func main() {
 	app := fiber.New()
 
-	// Recover from a panic thrown by any handler in the stack
 	app.Use(recover.New())
-
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,DELETE,PATCH",
@@ -31,9 +36,8 @@ func main() {
 	})
 
 	api := app.Group("/api/v1")
+	routes.UserRoute(api)
 
-	route.UserRoute(api)
-
-	app.Use(middleware.NotFound())
+	app.Use(middlewares.NotFound())
 	log.Fatal(app.Listen(":8080"))
 }

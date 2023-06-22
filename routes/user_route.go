@@ -1,4 +1,4 @@
-package route
+package routes
 
 import (
 	"github.com/edr3x/fiber-explore/controllers"
@@ -9,4 +9,6 @@ func UserRoute(router fiber.Router) {
 	r := router.Group("/user")
 
 	r.Get("/", controller.GetUser)
+
+	r.Post("/", controller.CreateUser)
 }
