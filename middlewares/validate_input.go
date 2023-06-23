@@ -5,9 +5,9 @@ import (
 )
 
 type ErrorResponse struct {
-	FailedField string
-	Tag         string
-	Value       string
+	Field  string `json:"field"`
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
 }
 
 var validate = validator.New()
@@ -15,14 +15,12 @@ var validate = validator.New()
 func ValidateInput(schema interface{}) []*ErrorResponse {
 	var errors []*ErrorResponse
 
-	err := validate.Struct(schema)
-
-	if err != nil {
+	if err := validate.Struct(schema); err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
 			var element ErrorResponse
-			element.FailedField = err.StructNamespace()
-			element.Tag = err.Tag()
-			element.Value = err.Param()
+			element.Field = err.Field()
+			element.Error = err.Tag()
+			element.Reason = err.Error()
 			errors = append(errors, &element)
 		}
 	}
