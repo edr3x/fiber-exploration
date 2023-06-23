@@ -72,7 +72,7 @@ func LoginController(c *fiber.Ctx) error {
 }
 
 func GetSelfDetails(c *fiber.Ctx) error {
-	user, ok := c.Locals("user").(model.User)
+	user, ok := c.Locals("user").(model.User) //note: this is type assertion
 	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
 			Success: false,

@@ -39,7 +39,6 @@ func RequireAuth(c *fiber.Ctx) error {
 		})
 
 	}
-
 	if float64(time.Now().Unix()) > claims["exp"].(float64) {
 		return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
 			Success: false,
@@ -48,8 +47,7 @@ func RequireAuth(c *fiber.Ctx) error {
 	}
 
 	var user model.User
-	dbresponse := config.DB.First(&user, claims["id"])
-	if dbresponse.Error != nil {
+	if res := config.DB.First(&user, claims["id"]); res.Error != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
 			Success: false,
 			Message: "Unauthorized",
