@@ -8,10 +8,10 @@ import (
 
 func UserRoute(router fiber.Router) {
 	r := router.Group("/user")
+	r.Get("/", middlewares.RequireAuth, middlewares.RequireAdmin, controller.GetAllUsers)
 
-	r.Get("/", middlewares.RequireAuth, controller.GetSelfDetails)
-
-	r.Post("/", controller.CreateUser)
-
+	r.Post("/create", controller.CreateUser)
 	r.Post("/login", controller.LoginController)
+
+	r.Get("/detail", middlewares.RequireAuth, controller.GetSelfDetails)
 }

@@ -71,3 +71,32 @@ func LoginService(login_creds model.LoginInput) (LoginResponse, error) {
 		},
 	}, nil
 }
+
+type UserServiceResponse struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+	Role  string `json:"role"`
+}
+
+func GetAllUsersService() ([]UserServiceResponse, error) {
+
+	var users []model.User
+
+	if dbres := config.DB.Find(&users); dbres.Error != nil {
+		return nil, dbres.Error
+	}
+
+	var usersRes []UserServiceResponse
+
+	for _, user := range users {
+		usersRes = append(usersRes, UserServiceResponse{
+			Email: user.Email,
+			Name:  user.Name,
+			Age:   user.Age,
+			Role:  string(user.Role),
+		})
+	}
+
+	return usersRes, nil
+}

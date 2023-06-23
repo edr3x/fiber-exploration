@@ -85,3 +85,19 @@ func GetSelfDetails(c *fiber.Ctx) error {
 		Payload: user,
 	})
 }
+
+func GetAllUsers(c *fiber.Ctx) error {
+	response, err := services.GetAllUsersService()
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+			Success: false,
+			Message: err,
+		})
+	}
+
+	return c.Status(200).JSON(model.Response{
+		Success: true,
+		Payload: response,
+	})
+}
