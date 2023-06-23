@@ -1,6 +1,10 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Role string
 
@@ -10,10 +14,13 @@ const (
 )
 
 type User struct {
-	gorm.Model
-	Name     string `json:"name"`
-	Age      int    `json:"age"`
-	Email    string `json:"username" gorm:"unique"`
-	Role     Role   `json:"role" gorm:"default:customer"`
-	Password string `json:"password"`
+	ID        string `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	Name      string `json:"name"`
+	Age       int    `json:"age"`
+	Email     string `json:"username" gorm:"unique"`
+	Role      Role   `json:"role" gorm:"default:customer"`
+	Password  string `json:"password"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
