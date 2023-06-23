@@ -71,9 +71,17 @@ func LoginController(c *fiber.Ctx) error {
 	})
 }
 
-func GetUser(c *fiber.Ctx) error {
+func GetSelfDetails(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(model.User)
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+	}
+
 	return c.Status(200).JSON(model.Response{
 		Success: true,
-		Payload: "User route",
+		Payload: user,
 	})
 }
