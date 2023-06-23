@@ -17,6 +17,7 @@ func init() {
 	config.LoadEnv()
 	config.ConnectToDB()
 	config.DbSync()
+	config.RedisConnect()
 }
 
 func main() {

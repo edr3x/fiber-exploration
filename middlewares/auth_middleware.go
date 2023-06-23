@@ -1,6 +1,8 @@
 package middlewares
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +13,8 @@ import (
 	"github.com/edr3x/fiber-explore/model"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 func RequireAuth(c *fiber.Ctx) error {
@@ -45,8 +49,41 @@ func RequireAuth(c *fiber.Ctx) error {
 	}
 
 	var user model.User
-	if res := config.DB.First(&user, claims["id"]); res.Error != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(err_res)
+	userId := claims["id"].(string)
+
+	ctx := context.Background()
+
+	redisVal, err := config.Redis.Get(ctx, userId).Result()
+	if err != nil {
+		if err == redis.Nil {
+			fmt.Println("provided key does not exist")
+		}
+	}
+
+	if redisVal != "" {
+		log.Println("got data from redis")
+		if err := json.Unmarshal([]byte(redisVal), &user); err != nil {
+			log.Println("error unmarshalling redis data")
+		}
+	} else {
+		log.Println("redis hit but didn't get data")
+		if res := config.DB.First(&user, "id = ?", userId); res.Error != nil {
+			if res.Error == gorm.ErrRecordNotFound {
+				return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
+					Success: false,
+					Message: "User not found",
+				})
+			}
+			return c.Status(fiber.StatusUnauthorized).JSON(err_res)
+		}
+		value, error := json.Marshal(user)
+		if error != nil {
+			log.Println("error marshalling redis data")
+		}
+
+		if err := config.Redis.Set(ctx, userId, value, 40*time.Minute).Err(); err != nil {
+			log.Println("redis set error")
+		}
 	}
 
 	c.Locals("user", user)
