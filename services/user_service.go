@@ -38,28 +38,28 @@ type LoginResponse struct {
 	Data  fiber.Map `json:"data"`
 }
 
-func LoginService(login_creds model.LoginInput) (interface{}, error) {
+func LoginService(login_creds model.LoginInput) (LoginResponse, error) {
 	var user model.User
 
 	result := config.DB.Where("email = ?", login_creds.Email).First(&user)
 
 	if result.Error != nil {
-		return nil, result.Error
+		return LoginResponse{}, result.Error
 	}
 
 	ok, err := argon2.VerifyEncoded([]byte(login_creds.Password), []byte(user.Password))
 	if !ok || err != nil {
-		return nil, err
+		return LoginResponse{}, err
 	}
 
 	userToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
+		"id":  user.ID,
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
 	})
 
 	tokenString, err := userToken.SignedString([]byte(os.Getenv("SECRET")))
 	if err != nil {
-		return nil, err
+		return LoginResponse{}, err
 	}
 
 	return LoginResponse{
