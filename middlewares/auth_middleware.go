@@ -15,12 +15,15 @@ import (
 
 func RequireAuth(c *fiber.Ctx) error {
 	headerVal := c.Get("Authorization")
+
+	err_res := model.FailureResponse{
+		Success: false,
+		Message: "Unauthorized",
+	}
+
 	if headerVal == "" {
 		log.Println("no auth header provided")
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"success": false,
-			"message": "Unauthorized",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(err_res)
 	}
 
 	token, _ := jwt.Parse(strings.Split(headerVal, " ")[1], func(token *jwt.Token) (interface{}, error) {
@@ -33,28 +36,32 @@ func RequireAuth(c *fiber.Ctx) error {
 	claims, ok := token.Claims.(jwt.MapClaims)
 
 	if !ok || !token.Valid {
-		return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
-			Success: false,
-			Message: "Unauthorized",
-		})
+		return c.Status(fiber.StatusUnauthorized).JSON(err_res)
 
 	}
 	if float64(time.Now().Unix()) > claims["exp"].(float64) {
-		return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
-			Success: false,
-			Message: "Token expired",
-		})
+		log.Println("token expired")
+		return c.Status(fiber.StatusUnauthorized).JSON(err_res)
 	}
 
 	var user model.User
 	if res := config.DB.First(&user, claims["id"]); res.Error != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(err_res)
+	}
+
+	c.Locals("user", user)
+
+	return c.Next()
+}
+
+func RequireAdmin(c *fiber.Ctx) error {
+	user := c.Locals("user").(model.User)
+	if user.Role != model.Admin {
 		return c.Status(fiber.StatusUnauthorized).JSON(model.FailureResponse{
 			Success: false,
 			Message: "Unauthorized",
 		})
 	}
-
-	c.Locals("user", user)
 
 	return c.Next()
 }
