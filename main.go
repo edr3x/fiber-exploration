@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -40,5 +42,12 @@ func main() {
 	routes.UserRoute(api)
 
 	app.Use(middlewares.NotFound())
-	log.Fatal(app.Listen(":8080"))
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5050"
+	}
+
+	fmt.Println("listening on port " + port + "...")
+	log.Fatal(app.Listen("0.0.0.0:" + port))
 }
