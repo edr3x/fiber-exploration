@@ -1,6 +1,10 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -9,6 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/matthewhartstonge/argon2"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 func CreateUserService(user_data model.CreateUserInput) (interface{}, error) {
@@ -53,8 +59,9 @@ func LoginService(login_creds model.LoginInput) (LoginResponse, error) {
 	}
 
 	userToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"id":   user.ID,
+		"exp":  time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"role": user.Role,
 	})
 
 	tokenString, err := userToken.SignedString([]byte(os.Getenv("SECRET")))
@@ -72,6 +79,58 @@ func LoginService(login_creds model.LoginInput) (LoginResponse, error) {
 	}, nil
 }
 
+type ProfileDetailsResponse struct {
+	Id    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+}
+
+func GetProfileDetailsService(userId string) (ProfileDetailsResponse, error) {
+	var user model.User
+
+	ctx := context.Background()
+
+	redisVal, err := config.Redis.Get(ctx, userId).Result()
+	if err != nil {
+		if err == redis.Nil {
+			fmt.Println("provided key does not exist")
+		}
+	}
+
+	if redisVal != "" {
+		log.Println("got data from redis")
+		if err := json.Unmarshal([]byte(redisVal), &user); err != nil {
+			log.Println("error unmarshalling redis data")
+		}
+	} else {
+		log.Println("redis hit but didn't get data")
+		if res := config.DB.First(&user, "id = ?", userId); res.Error != nil {
+			if res.Error == gorm.ErrRecordNotFound {
+				return ProfileDetailsResponse{}, fiber.NewError(404, "user not found")
+			}
+			return ProfileDetailsResponse{}, res.Error
+		}
+		value, error := json.Marshal(user)
+		if error != nil {
+			log.Println("error marshalling redis data")
+		}
+
+		if err := config.Redis.Set(ctx, userId, value, 40*time.Minute).Err(); err != nil {
+			log.Println("redis set error")
+		}
+	}
+
+	userResponse := ProfileDetailsResponse{
+		Id:    user.ID,
+		Email: user.Email,
+		Name:  user.Name,
+		Age:   user.Age,
+	}
+
+	return userResponse, nil
+}
+
 type UserServiceResponse struct {
 	Email string `json:"email"`
 	Name  string `json:"name"`
@@ -80,7 +139,6 @@ type UserServiceResponse struct {
 }
 
 func GetAllUsersService() ([]UserServiceResponse, error) {
-
 	var users []model.User
 
 	if dbres := config.DB.Find(&users); dbres.Error != nil {

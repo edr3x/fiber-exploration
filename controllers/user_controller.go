@@ -72,11 +72,14 @@ func LoginController(c *fiber.Ctx) error {
 }
 
 func GetSelfDetails(c *fiber.Ctx) error {
-	user, ok := c.Locals("user").(model.User) //note: this is type assertion
-	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(model.FailureResponse{
+	tokenData, _ := c.Locals("localUserData").(middlewares.TokenData) //note: this is type assertion
+
+	user, err := services.GetProfileDetailsService(tokenData.Id)
+
+	if err != nil {
+		return c.Status(500).JSON(model.FailureResponse{
 			Success: false,
-			Message: "Unauthorized",
+			Message: err,
 		})
 	}
 
